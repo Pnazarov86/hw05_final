@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -17,15 +18,17 @@ class PostURLTests(TestCase):
             slug='test-slug',
             description='Тестовое описание',
         )
-        cls.post = Post.objects.create(
-            text='Здесь должно быть написано что-то очень интересное.',
-            author=cls.author,
-            group=cls.group,
-        )
 
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
+        self.post = Post.objects.create(
+            text='Здесь должно быть написано что-то очень интересное.',
+            author=self.author,
+            group=self.group,
+        )
+
+        cache.clear()
 
     def test_url_exists_at_desired_location(self):
         """Страницы доступны любому пользователю."""

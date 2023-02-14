@@ -1,37 +1,15 @@
 {% extends 'base.html' %}
-{% load thumbnail %}
+
 {% block title %}Последние обновления на сайте{% endblock %}
 
 {% block content %}
-{% include 'posts/includes/switcher.html' %}
-  {% load cache %}
-    {% cache 20 index_page %}
-    <div class="container py-5">
+{% include 'posts/includes/switcher.html' with index=True %}
+  <div class="container py-5">
     <h1>Последние обновления на сайте</h1>
     {% for post in page_obj %}
-      <article>
-      <ul>
-        <li>
-          Автор: {{ post.author.get_full_name }}
-          <a href="{% url 'posts:profile' post.author.username %}">все посты пользователя</a>
-        </li>
-        <li>Дата публикации: {{ post.pub_date|date:"d E Y" }}</li>
-      </ul>
-      {% thumbnail post.image "500x600" crop="center" upscale=True as im %}
-      <img src="{{ im.url }}">
-      {% endthumbnail %}
-      <p>{{ post.text|linebreaksbr }}</p>
-      <a href="{% url 'posts:post_detail' post_id=post.id %}">подробная информация</a>
-      <br>
-      {% if post.group %}
-        <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы</a>
-      {% endif %}
-      <article>
-      {% if not forloop.last %}
-        <hr>
-      {% endif %}
+    {% include 'posts/includes/post_card.html' with group_link=True %}
+      {% if not forloop.last %}<hr>{% endif %}
     {% endfor %}
     {% include 'posts/includes/paginator.html' %}
-    </div>
-  {% endcache %}
+  </div>
 {% endblock %}

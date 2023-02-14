@@ -21,15 +21,15 @@ class PostModelTest(TestCase):
             group=cls.group,
         )
 
-    def test_models_group(self):
-        """Проверяем, что у модели Group корректно работает __str__."""
-        expected_object_name = self.group.title
-        self.assertEqual(expected_object_name, str(self.group))
-
-    def test_models_post(self):
-        """Проверяем, что у модели Post корректно работает __str__."""
-        expected_object_name = self.post.text[:TEXT_LIM]
-        self.assertEqual(expected_object_name, str(self.post))
+    def test_models(self):
+        """Проверяем, что у моделей корректно работает __str__."""
+        objects = {
+            str(self.group): self.group.title,
+            str(self.post): self.post.text[:TEXT_LIM]
+        }
+        for value, expected in objects.items():
+            with self.subTest(value=value):
+                self.assertEqual(value, expected)
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""

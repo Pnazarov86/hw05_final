@@ -24,7 +24,7 @@
     </ul>
   </aside>
   <article class="col-12 col-md-5">
-    {% thumbnail post.image "500x600" crop="center" upscale=True as im %}
+    {% thumbnail post.image "300x400" crop="center" upscale=True as im %}
     <img src="{{ im.url }}">
     {% endthumbnail %}
     <p>{{ post.text|linebreaksbr }}</p>

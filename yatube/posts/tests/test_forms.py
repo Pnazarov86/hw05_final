@@ -41,11 +41,6 @@ class PostFormTests(TestCase):
             slug='test-slug_2',
             description='Тестовое описание_2',
         )
-        cls.post = Post.objects.create(
-            text='Здесь должно быть написано что-то очень интересное.',
-            author=cls.author,
-            group=cls.group,
-        )
 
     @classmethod
     def tearDownClass(cls):
@@ -55,6 +50,11 @@ class PostFormTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
+        self.post = Post.objects.create(
+            text='Здесь должно быть написано что-то очень интересное.',
+            author=self.author,
+            group=self.group,
+        )
 
     def test_create_post(self):
         """Проверяем создание нового поста."""
@@ -69,12 +69,17 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        new_post = Post.objects.exclude(id__in=old_ids)[0]
+        self.assertEqual(Post.objects.count(), 2)
+        new_posts = Post.objects.exclude(id__in=old_ids)
+        self.assertEqual(new_posts.count(), 1)
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertEqual(new_post.text, form_data['text'])
-        self.assertEqual(new_post.group.id, form_data['group'])
-        self.assertEqual(new_post.author, self.author)
-        self.assertEqual(new_post.image, 'posts/' + form_data['image'].name)
+        self.assertEqual(new_posts[0].text, form_data['text'])
+        self.assertEqual(new_posts[0].group.id, form_data['group'])
+        self.assertEqual(new_posts[0].author, self.author)
+        self.assertEqual(
+            new_posts[0].image,
+            'posts/' + form_data['image'].name
+        )
 
     def test_post_edit(self):
         """Проверяем отредактированный пост."""
@@ -114,6 +119,11 @@ class CommentFormTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.author)
+        self.post = Post.objects.create(
+            text='Здесь должно быть написано что-то очень интересное.',
+            author=self.author,
+            group=self.group,
+        )
 
     def test_create_comment(self):
         """Проверяем создание нового комментария."""
@@ -124,7 +134,10 @@ class CommentFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        new_comment = Comment.objects.exclude(id__in=old_ids)[0]
+        self.assertEqual(Comment.objects.count(), 1)
+        new_comment = Comment.objects.exclude(id__in=old_ids)
+        self.assertEqual(new_comment.count(), 1)
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertEqual(new_comment.text, form_data['text'])
-        self.assertEqual(new_comment.author, self.author)
+        self.assertEqual(new_comment[0].text, form_data['text'])
+        self.assertEqual(new_comment[0].author, self.author)
+        self.assertEqual(new_comment[0].post, self.post)

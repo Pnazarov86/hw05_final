@@ -1,11 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_page
 
 from .forms import CommentForm, PostForm
 from .models import Comment, Follow, Group, Post, User
 from .utils import get_page_context
 
 
+@cache_page(20, key_prefix='index_page')
 def index(request):
     """Главная страница."""
     posts_list = Post.objects.all()
@@ -33,7 +35,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts_list = author.posts.all()
     page_obj = get_page_context(posts_list, request)
-    following = author.following.exists()
+    following = False
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user, author=author
+        ).exists()
     context = {
         'author': author,
         'page_obj': page_obj,
@@ -132,5 +138,5 @@ def profile_follow(request, username):
 def profile_unfollow(request, username):
     """Отписка от автора."""
     author = get_object_or_404(User, username=username)
-    Follow.objects.get(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user, author=author).delete()
     return redirect('posts:profile', username=username)

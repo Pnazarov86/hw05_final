@@ -69,7 +69,6 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        self.assertEqual(Post.objects.count(), 2)
         new_posts = Post.objects.exclude(id__in=old_ids)
         self.assertEqual(new_posts.count(), 1)
         self.assertEqual(response.status_code, HTTPStatus.OK)
@@ -134,7 +133,6 @@ class CommentFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        self.assertEqual(Comment.objects.count(), 1)
         new_comment = Comment.objects.exclude(id__in=old_ids)
         self.assertEqual(new_comment.count(), 1)
         self.assertEqual(response.status_code, HTTPStatus.OK)

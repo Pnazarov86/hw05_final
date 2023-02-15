@@ -33,8 +33,7 @@ class PostViewsTests(TestCase):
             content_type='image/gif'
         )
         cls.author = User.objects.create(username='Nemo')
-        cls.user = User.objects.create(username='Anonym')
-        cls.user_2 = User.objects.create(username='Unknown')
+        cls.user = User.objects.create(username='Unknown')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -133,11 +132,12 @@ class PostViewsTests(TestCase):
         for value, expected in objects_post.items():
             with self.subTest(value=value):
                 self.assertEqual(value, expected)
-        self.assertFalse(
-            Follow.objects.filter(
-                user=self.user,
-                author=self.author).exists()
-        )
+        Follow.objects.create(user=self.user, author=self.author)
+        following = Follow.objects.filter(
+            user=self.user,
+            author=self.author
+        ).exists()
+        self.assertNotEqual(response.context['following'], following)
 
     def test_post_detail_page_show_correct_context(self):
         """Шаблон 'post_detail' сформирован с правильным контекстом."""
@@ -202,6 +202,13 @@ class PostViewsTests(TestCase):
     def test_cache_index(self):
         """Проверяем работу кеша главной страницы. """
         response = self.client.get(reverse('posts:index'))
+        Post.objects.create(
+            author=self.user,
+            text='Проверка кеша главной страницы.',
+            group=self.group
+        )
+        response_before_del_post = self.client.get(reverse('posts:index'))
+        self.assertEqual(response.content, response_before_del_post.content)
         self.post.delete()
         response_del_post = self.client.get(reverse('posts:index'))
         self.assertEqual(response.content, response_del_post.content)
@@ -210,52 +217,6 @@ class PostViewsTests(TestCase):
         self.assertNotEqual(
             response.content,
             response_cache_clean.content
-        )
-
-    def test_authorized_user_follow_other_users(self):
-        """Авторизованный user может подписываться на других users."""
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        self.assertEqual(len(response.context['page_obj']), 0)
-        self.authorized_client.get(
-            reverse('posts:profile_follow', kwargs={'username': self.user})
-        )
-        self.assertEqual(Follow.objects.count(), 1)
-
-    def test_authorized_user_unfollow_other_users(self):
-        """Авторизованный user может отписываться других users."""
-        self.authorized_client.get(
-            reverse('posts:profile_follow', kwargs={'username': self.user})
-        )
-        self.authorized_client.get(
-            reverse('posts:profile_unfollow', kwargs={'username': self.user})
-        )
-        self.assertEqual(Follow.objects.count(), 0)
-
-    def test_follower_new_post(self):
-        """Новая запись пользователя появляется для подписчиков."""
-        self.authorized_client.force_login(self.user)
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        Follow.objects.get_or_create(user=self.user, author=self.author)
-        post_count = response.context['page_obj'].object_list.count()
-        response_follow = self.authorized_client.get(
-            reverse('posts:follow_index')
-        )
-        self.assertEqual(
-            len(response_follow.context['page_obj']),
-            post_count + 1
-        )
-
-    def test_unfollower_new_post(self):
-        """Новая запись не появляется для не подписчиков."""
-        self.authorized_client.force_login(self.user_2)
-        response = self.authorized_client.get(reverse('posts:follow_index'))
-        Follow.objects.get_or_create(user=self.user, author=self.author)
-        post_count = response.context['page_obj'].object_list.count()
-        response_unfollow = self.authorized_client.get(
-            reverse('posts:follow_index')
-        )
-        self.assertEqual(
-            len(response_unfollow.context['page_obj']), post_count
         )
 
 
@@ -314,3 +275,58 @@ class PaginatorTest(TestCase):
                     len(response.context['page_obj']),
                     TEST_POSTS - NUMBER_OF_POSTS
                 )
+
+
+class FollowTest(TestCase):
+    """Тестирование подписок."""
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cache.clear()
+        cls.author = User.objects.create(username='Nemo')
+        cls.user = User.objects.create(username='Unknown')
+        cls.post = Post.objects.create(
+            text='Тестирование подписок',
+            author=cls.author
+        )
+
+    def setUp(self):
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+
+    def test_authorized_user_follow_other_users(self):
+        """Авторизованный user может подписываться на других users."""
+        follows_old = list(Follow.objects.values_list('id', flat=True))
+        self.authorized_client.get(
+            reverse('posts:profile_follow', kwargs={'username': self.author})
+        )
+        follow_new = Follow.objects.exclude(id__in=follows_old)
+        self.assertEqual(len(follow_new), len(follows_old) + 1)
+
+    def test_authorized_user_unfollow_other_users(self):
+        """Авторизованный user может отписываться других users."""
+        follow = Follow.objects.create(user=self.user, author=self.author)
+        follows_old = list(Follow.objects.values_list('id', flat=True))
+        self.authorized_client.get(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.author}
+            )
+        )
+        follow_new = Follow.objects.exclude(id__in=follows_old)
+        self.assertNotIn(follow, follow_new)
+        self.assertEqual(len(follow_new), len(follows_old) - 1)
+
+    def test_follower_new_post(self):
+        """Новая запись пользователя появляется для подписчиков."""
+        post = self.post
+        Follow.objects.create(user=self.user, author=self.author)
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        post_count = response.context['page_obj'][0]
+        self.assertEqual(post_count.id, post.id)
+
+    def test_unfollower_new_post(self):
+        """Новая запись не появляется для не подписчиков."""
+        post = self.post
+        response = self.authorized_client.get(reverse('posts:follow_index'))
+        self.assertNotIn(post.id, response.context['page_obj'])

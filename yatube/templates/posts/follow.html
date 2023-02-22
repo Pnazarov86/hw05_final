@@ -3,13 +3,13 @@
 {% block title %}Лента постов{% endblock %}
 
 {% block content %}
-{% include 'posts/includes/switcher.html' with follow=True %}
-  <div class="container py-5">
+  {% include 'posts/includes/switcher.html' with follow=True %}
+  <div class="container py-3">
     <h1>Последние обновления на сайте</h1>
     {% for post in page_obj %}
     {% include 'posts/includes/post_card.html' with group_link=True %}
       {% if not forloop.last %}<hr>{% endif %}
     {% endfor %}
     {% include 'posts/includes/paginator.html' %}
-    </div>
+  </div>
 {% endblock %}

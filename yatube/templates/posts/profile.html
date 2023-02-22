@@ -6,9 +6,26 @@
 <div class="container py-5">
   <div class="mb-5">
     <h1>Все посты пользователя {{ author.get_full_name }}</h1>
-    <h3>Всего постов: {{ author.posts.count }}</h3>
-    <h5>Подписчиков: {{ author.following.count }}</h5>
-    <h5>Подписок {{ author.follower.count }}</h5>
+    <div class="row">
+      <div class="col-sm">
+        <h5>
+          Всего постов: 
+          <span class="badge bg-secondary">{{ author.posts.count }}</span>
+        </h5>
+      </div>
+      <div class="col-sm">
+        <h5>
+          Подписчиков:
+            <span class="badge bg-secondary">{{ author.following.count }}</span>
+        </h5>
+      </div>
+      <div class="col-sm">
+        <h5>
+          Подписок:
+            <span class="badge bg-secondary">{{ author.follower.count }}</span>
+        </h5>
+      </div>
+    </div>
     {% if author != request.user and request.user.is_authenticated %}
       {% if following %}
       <a class="btn btn-lg btn-light" href="{% url 'posts:profile_unfollow' author.username %}" role="button">

@@ -108,5 +108,5 @@ class Follow(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Лента постов'
-        verbose_name_plural = 'Лента постов'
+        verbose_name = 'Подписки'
+        verbose_name_plural = 'Подписки'
